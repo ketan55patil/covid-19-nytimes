@@ -2,34 +2,34 @@ import requests
 import mysql.connector
 from mysql.connector import errorcode
 import csv
-# import datetime
 
 
-class Covid19Nytime():
+class Covid19Nytimes:
+
+    def __init__(self, file_name):
+        self.file_name = file_name
 
     def get_nytimes_csv(self):
-        file_name = "us-counties.csv"
-        url = f"https://raw.githubusercontent.com/nytimes/covid-19-data/master/{file_name}"
+        url\
+            = f"https://raw.githubusercontent.com/nytimes/covid-19-data/master/{self.file_name}"
 
         response = requests.get(url, allow_redirects=True)
         if response.status_code == 200:
             print('Connection to URL was successful!')
 
             print('Writing contents to file...')
-            with open(file_name, 'wb') as fw:
+            with open(self.file_name, 'wb') as fw:
                 fw.write(response.content)
         return True
 
-    def read_nytimes_csv(self, file_name):
-        with open(file_name, newline='') as csvfile:
-            # spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-            spamreader = csv.reader(csvfile)
+    def read_nytimes_csv(self):
+        with open(self.file_name, newline='') as csvfile:
+            file_rows = csv.reader(csvfile)
 
-            for row in spamreader:
+            for row in file_rows:
                 print(', '.join(row))
 
-    def do_not_call_me(self):
-        # max_date = "2020-04-28"
+    def insert_into_db(self):
 
         # DB
         db_host = "127.0.0.1"
@@ -61,47 +61,36 @@ class Covid19Nytime():
 
         print('Closing cursor')
         cursor.close()
-        # max_date = "2020-04-29"
 
         print(f"max_date is {max_date}")
-        # print(f'max_date type is {type(max_date)}')
         sql_insert = f"INSERT INTO {db_table_name} (date, county, state, fips, cases, deaths) \
                        VALUES (%s, %s, %s, %s, %s, %s)"
 
-        # if connection was successful with nytimes only then do the following
-        if True:
-            commit_required = False
-            cursor = cnx.cursor()
-            print(f'Reading file to get data where date is greater than max_date: {max_date}...')
+        commit_required = False
+        cursor = cnx.cursor()
+        print(f'Reading file to get data where date is greater than max_date: {max_date}...')
 
-            # row_count = 0
-            with open(file_name, newline='') as csvfile:
-                data = csv.reader(csvfile)
-                for line in data:
-                    date_col = line[0]
+        # row_count = 0
+        with open(self.file_name, newline='') as csvfile:
+            data = csv.reader(csvfile)
+            for line in data:
+                date_col = line[0]
 
-                    # print(f"max_date is None: {max_date == 'None'}")
-                    # print(f'date_col > max_date: {date_col > max_date}')
-                    # print(f'{max_date is None or date_col > max_date}')
-                    # print(f"AND date_col != 'date' is {date_col != 'date'}")
-                    #
-                    # exit(0)
+                if (max_date == 'None' or date_col > max_date) and date_col != 'date':
+                    county_col = line[1]
+                    state_col = line[2]
+                    fips_col = line[3] if line[3] != '' else 0
+                    cases_col = line[4]
+                    deaths_col = line[5]
 
-                    if (max_date == 'None' or date_col > max_date) and date_col != 'date':
-                        county_col = line[1]
-                        state_col = line[2]
-                        fips_col = line[3] if line[3] != '' else 0
-                        cases_col = line[4]
-                        deaths_col = line[5]
+                    row_list = (date_col, county_col, state_col, fips_col,
+                                cases_col, deaths_col)
 
-                        row_list = (date_col, county_col, state_col, fips_col,
-                                    cases_col, deaths_col)
+                    print(f'Attempting to insert {row_list}...')
+                    cursor.execute(sql_insert, row_list)
 
-                        print(f'Attempting to insert {row_list}...')
-                        cursor.execute(sql_insert, row_list)
-
-                        if not commit_required:
-                            commit_required = True
+                    if not commit_required:
+                        commit_required = True
 
         if commit_required:
             print('Committing insert...')
@@ -111,8 +100,9 @@ class Covid19Nytime():
         print('Closing DB connection')
         cnx.close()
 
-file_name = 'us-counties.csv'
-my_obj = Covid19Nytime()
-# my_obj.get_nytimes_csv()
-# my_obj.read_nytimes_csv(file_name)
-my_obj.do_not_call_me()
+
+file_name1 = 'us-counties.csv'
+my_obj = Covid19Nytimes(file_name1)
+my_obj.get_nytimes_csv()
+# my_obj.read_nytimes_csv()
+my_obj.insert_into_db()
